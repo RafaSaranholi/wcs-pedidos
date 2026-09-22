@@ -243,25 +243,77 @@ async function createCustomer(name,phone){
   return r.data.id;
 }
 
-async function createOrder(customerId,name,phone){
+async function createOrder(customerId,name,phone,payment,delivery,address,notes){
   let total=0;
-  const itemsToInsert=cart.map(i=>{
+  const items=cart.map(i=>{
     const p=products.find(x=>x.id===i.id);
-    if(!p) throw new Error("Produto não encontrado no cardápio.");
+    if(!p) throw new Error(`Produto não encontrado no cardápio: ${i.id}`);
+
+    const quantity=Math.max(1,Number(i.qty)||1);
+    const unitPrice=Number(p.price)||0;
+    total += unitPrice*quantity;
+
     return {
-      order_id:r.data.id,
       product_id:p.id,
-      product_name:String(p.name || "Produto"),
-      quantity:Number(i.qty),
-      unit_price:Number(p.price)
+      product_name:String(p.name || 'Produto'),
+      quantity,
+      unit_price:unitPrice
     };
   });
 
-  const itemResult=await sb.from("order_items").insert(itemsToInsert);
-  if(itemResult.error)throw itemResult.error;
+  if(!items.length) throw new Error('Carrinho vazio.');
 
-  return {orderId:r.data.id,total};
+  const orderPayload={
+    company_id:companyId,
+    customer_id:customerId,
+    customer_name:name,
+    customer_phone:phone,
+    status:'pending',
+    total,
+    delivery_type:delivery,
+    delivery_address:delivery==='pickup' ? '' : String(address||'').trim(),
+    notes:String(notes||'').trim(),
+    payment_method:payment
+  };
+
+  const orderResult=await sb.from('orders')
+    .insert(orderPayload)
+    .select('id')
+    .single();
+
+  if(orderResult.error) throw orderResult.error;
+
+  const orderId=orderResult.data.id;
+
+  const itemPayload=items.map(item=>({
+    order_id:orderId,
+    product_id:item.product_id,
+    product_name:item.product_name,
+    quantity:item.quantity,
+    unit_price:item.unit_price
+  }));
+
+  const itemResult=await sb.from('order_items').insert(itemPayload);
+  if(itemResult.error) throw itemResult.error;
+
+  return {orderId,total};
 }
+
+async function invokePayment(orderId){
+  const body={order_id:orderId};
+
+  // A dashboard pode mostrar o nome amigável da função diferente do slug do endpoint.
+  // Tentamos o nome da função primeiro e, se a chamada nem chegar ao Edge Function,
+  // tentamos o slug que aparece no endpoint publicado.
+  let result=await sb.functions.invoke('criar-pagamento',{body});
+
+  if(result.error && /failed to send a request|function.*not found|404/i.test(String(result.error.message||''))){
+    result=await sb.functions.invoke('dynamic-api',{body});
+  }
+
+  return result;
+}
+
 
 $("send").onclick=async()=>{
   try{
@@ -282,12 +334,18 @@ $("send").onclick=async()=>{
     $("send").textContent="PROCESSANDO...";
 
     const customerId=await createCustomer(name,phone);
-    const order=await createOrder(customerId,name,phone);
+    const order=await createOrder(
+      customerId,
+      name,
+      phone,
+      payment,
+      delivery,
+      $("address").value,
+      $("notes").value
+    );
 
     if(payment==="mercado_pago"){
-      const {data,error}=await sb.functions.invoke("criar-pagamento",{
-        body:{order_id:order.orderId}
-      });
+      const {data,error}=await invokePayment(order.orderId);
 
       if(error)throw error;
       if(!data?.checkout_url)
