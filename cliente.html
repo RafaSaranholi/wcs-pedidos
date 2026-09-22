@@ -1,318 +1,70 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cardápio Online</title>
-  <style>
-    :root {
-      --primary: #111827;
-      --secondary: #ffffff;
-      --button-color: #16a34a;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: Arial, Helvetica, sans-serif;
-      background: #f3f4f6;
-      color: #111827;
-    }
-    header {
-      background: var(--primary);
-      color: var(--secondary);
-      padding: 24px 16px;
-      text-align: center;
-    }
-    header h1 { margin: 0 0 8px; font-size: 28px; }
-    header p { margin: 0; opacity: .9; }
-    main {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 20px 16px 110px;
-    }
-    .category { margin-top: 28px; }
-    .category h2 { margin: 0 0 12px; font-size: 22px; }
-    .category-description {
-      margin: -4px 0 14px;
-      color: #6b7280;
-    }
-    .product {
-      background: #fff;
-      border-radius: 14px;
-      padding: 14px;
-      margin-bottom: 14px;
-      display: flex;
-      gap: 14px;
-      align-items: center;
-      box-shadow: 0 2px 8px rgba(0,0,0,.08);
-    }
-    .product img,
-    .product-placeholder {
-      width: 110px;
-      height: 110px;
-      object-fit: cover;
-      border-radius: 10px;
-      background: #e5e7eb;
-      flex-shrink: 0;
-    }
-    .product-info { flex: 1; min-width: 0; }
-    .product h3 { margin: 0 0 6px; font-size: 18px; }
-    .product p {
-      margin: 0 0 10px;
-      color: #6b7280;
-      line-height: 1.4;
-    }
-    .price {
-      font-size: 18px;
-      font-weight: bold;
-      margin-bottom: 10px;
-    }
-    button {
-      border: 0;
-      border-radius: 8px;
-      padding: 10px 16px;
-      cursor: pointer;
-      font-weight: bold;
-      background: var(--button-color);
-      color: #fff;
-    }
-    .cart {
-      position: fixed;
-      left: 16px;
-      right: 16px;
-      bottom: 16px;
-      max-width: 868px;
-      margin: auto;
-      background: var(--button-color);
-      color: #fff;
-      border-radius: 14px;
-      padding: 14px 18px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 5px 20px rgba(0,0,0,.2);
-      z-index: 10;
-    }
-    .loading, .error, .empty {
-      text-align: center;
-      padding: 40px 20px;
-    }
-    .error { color: #b91c1c; }
-    @media (max-width: 600px) {
-      .product {
-        align-items: flex-start;
-        padding: 12px;
-      }
-      .product img,
-      .product-placeholder {
-        width: 90px;
-        height: 90px;
-      }
-      .product h3 { font-size: 17px; }
-    }
-  </style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Cardápio — WCS Pedidos</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;color:#111827}
+header{background:#111827;color:#fff;padding:24px 18px;text-align:center}header h1{margin:0;font-size:26px}header p{margin:8px 0 0;color:#d1d5db}
+main{max-width:900px;margin:24px auto;padding:0 16px}.status{background:#fff;border-radius:14px;padding:14px 16px;margin-bottom:18px;color:#6b7280}
+.category{margin:26px 0}.category h2{font-size:21px;margin:0 0 12px}.product{background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;display:flex;gap:14px;align-items:center;box-shadow:0 3px 12px rgba(0,0,0,.06)}
+.product img{width:95px;height:95px;object-fit:cover;border-radius:10px;background:#e5e7eb}.info{flex:1}.info h3{margin:0 0 5px}.info p{margin:0 0 8px;color:#6b7280;font-size:14px}.price{font-weight:bold;color:#16a34a;font-size:18px}
+.add{border:0;background:#16a34a;color:#fff;padding:10px 13px;border-radius:9px;font-weight:bold;cursor:pointer}.empty{text-align:center;padding:40px;background:#fff;border-radius:14px}
+.cart{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#111827;color:#fff;border:0;border-radius:14px;padding:15px 22px;font-weight:bold;box-shadow:0 8px 25px rgba(0,0,0,.25);cursor:pointer}
+.back{display:inline-block;margin-top:12px;color:#111827;text-decoration:none}
+</style>
 </head>
-
 <body>
-  <header>
-    <h1 id="store-name">Carregando...</h1>
-    <p id="store-description"></p>
-  </header>
+<header><h1 id="storeName">Carregando...</h1><p id="storeDescription"></p></header>
+<main>
+<div id="status" class="status">Carregando cardápio...</div>
+<div id="menu"></div>
+<a class="back" href="index.html">← Voltar</a>
+</main>
+<button class="cart" id="cart">🛒 Carrinho: <span id="cartCount">0</span></button>
+<script>
+const SUPABASE_URL="https://ikhwsuofjmsqtjmjytzg.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY="sb_publishable_OJ4FLmLOfPB-iezUDRI2-A_RiodfJ_V";
+const STORE_SLUG=new URLSearchParams(location.search).get("loja")||"loja-teste";
+const TEST_COMPANY_ID="e3182b21-7d45-4d73-81e1-f2beb399fa9a";
+const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+let companyId=null,cartCount=0;
 
-  <main>
-    <div id="menu" class="loading">Carregando cardápio...</div>
-  </main>
+const money=v=>Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+function status(t){document.getElementById("status").textContent=t}
+function add(){cartCount++;document.getElementById("cartCount").textContent=cartCount}
 
-  <div class="cart">
-    <span>🛒 Carrinho: <strong id="cart-count">0</strong></span>
-    <button type="button" onclick="alert('Carrinho será desenvolvido no próximo passo.')">
-      Ver carrinho
-    </button>
-  </div>
-
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
-
-    const SUPABASE_URL = "https://ikhwsuofjmsqtjmjytzg.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_OJ4FLmLOfPB-iezUDRI2-A_RiodfJ_V";
-    const STORE_SLUG = "loja-teste";
-    const TEST_COMPANY_ID = "e3182b21-7d45-4d73-81e1-f2beb399fa9a";
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-    let cart = [];
-
-    function escapeHtml(text) {
-      return String(text ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    }
-
-    function formatPrice(value) {
-      return Number(value || 0).toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL"
-      });
-    }
-
-    async function loadStore() {
-      const { data, error } = await supabase
-        .from("companies")
-        .select("*")
-        .eq("slug", STORE_SLUG)
-        .maybeSingle();
-
-      if (error) {
-        throw new Error("Erro ao localizar a loja: " + error.message);
-      }
-
-      if (!data) {
-        throw new Error('A loja "loja-teste" não foi encontrada.');
-      }
-
-      const companyId = data.id || TEST_COMPANY_ID;
-
-      if (!companyId) {
-        throw new Error("A loja foi encontrada, mas não possui ID.");
-      }
-
-      document.documentElement.style.setProperty(
-        "--primary", data.primary_color || "#111827"
-      );
-      document.documentElement.style.setProperty(
-        "--secondary", data.secondary_color || "#ffffff"
-      );
-      document.documentElement.style.setProperty(
-        "--button-color", data.button_color || "#16a34a"
-      );
-
-      document.getElementById("store-name").textContent =
-        data.name || "Loja";
-
-      document.getElementById("store-description").textContent =
-        data.description || "";
-
-      return { ...data, id: companyId };
-    }
-
-    async function loadMenu(companyId) {
-      if (!companyId) {
-        throw new Error("ID da empresa não foi definido.");
-      }
-
-      const { data: categories, error: categoryError } = await supabase
-        .from("categories")
-        .select("id,name,description,display_order")
-        .eq("company_id", companyId)
-        .eq("is_active", true)
-        .order("display_order", { ascending: true });
-
-      if (categoryError) {
-        throw new Error(
-          "Erro ao carregar categorias: " + categoryError.message
-        );
-      }
-
-      const { data: products, error: productError } = await supabase
-        .from("products")
-        .select("id,category_id,name,description,price,image_url,display_order")
-        .eq("company_id", companyId)
-        .eq("is_active", true)
-        .order("display_order", { ascending: true });
-
-      if (productError) {
-        throw new Error(
-          "Erro ao carregar produtos: " + productError.message
-        );
-      }
-
-      const menu = document.getElementById("menu");
-      menu.className = "";
-
-      if (!categories || categories.length === 0) {
-        menu.innerHTML = `
-          <div class="empty">
-            <h2>Nenhuma categoria cadastrada.</h2>
-          </div>
-        `;
-        return;
-      }
-
-      menu.innerHTML = categories.map(category => {
-        const categoryProducts = (products || []).filter(
-          product => product.category_id === category.id
-        );
-
-        return `
-          <section class="category">
-            <h2>${escapeHtml(category.name)}</h2>
-            ${
-              category.description
-                ? `<p class="category-description">${escapeHtml(category.description)}</p>`
-                : ""
-            }
-            ${
-              categoryProducts.length
-                ? categoryProducts.map(product => `
-                    <article class="product">
-                      ${
-                        product.image_url
-                          ? `<img src="${escapeHtml(product.image_url)}"
-                                  alt="${escapeHtml(product.name)}">`
-                          : `<div class="product-placeholder"></div>`
-                      }
-                      <div class="product-info">
-                        <h3>${escapeHtml(product.name)}</h3>
-                        <p>${escapeHtml(product.description || "")}</p>
-                        <div class="price">${formatPrice(product.price)}</div>
-                        <button
-                          type="button"
-                          data-product-id="${escapeHtml(product.id)}"
-                          data-product-name="${escapeHtml(product.name)}"
-                          data-product-price="${Number(product.price) || 0}"
-                        >
-                          Adicionar
-                        </button>
-                      </div>
-                    </article>
-                  `).join("")
-                : `<div class="empty">Nenhum produto disponível nesta categoria.</div>`
-            }
-          </section>
-        `;
-      }).join("");
-
-      menu.querySelectorAll("button[data-product-id]").forEach(button => {
-        button.addEventListener("click", () => {
-          cart.push({
-            id: button.dataset.productId,
-            name: button.dataset.productName,
-            price: Number(button.dataset.productPrice)
-          });
-
-          document.getElementById("cart-count").textContent = cart.length;
-        });
-      });
-    }
-
-    async function init() {
-      try {
-        const store = await loadStore();
-        await loadMenu(store.id);
-      } catch (error) {
-        console.error("Erro ao carregar cardápio:", error);
-
-        document.getElementById("menu").className = "error";
-        document.getElementById("menu").innerHTML = `
-          <h2>Não foi possível carregar o cardápio.</h2>
-          <p>${escapeHtml(error.message || "Erro desconhecido.")}</p>
-        `;
-      }
-    }
-
-    init();
-  </script>
+async function loadStore(){
+const {data,error}=await supabaseClient.from("companies").select("*").eq("slug",STORE_SLUG).maybeSingle();
+if(error){console.error(error);status("Não foi possível carregar a loja.");return false}
+companyId=(data&&data.id)||TEST_COMPANY_ID;
+if(data){document.getElementById("storeName").textContent=data.name||"WCS Pedidos";document.getElementById("storeDescription").textContent=data.description||""}
+return true;
+}
+async function loadMenu(){
+const {data:cats,error:ce}=await supabaseClient.from("categories").select("id,name,description,display_order").eq("company_id",companyId).eq("is_active",true).order("display_order",{ascending:true});
+if(ce){console.error(ce);status("Erro ao carregar categorias.");return}
+const {data:products,error:pe}=await supabaseClient.from("products").select("id,category_id,name,description,price,image_url,display_order").eq("company_id",companyId).eq("is_active",true).order("display_order",{ascending:true});
+if(pe){console.error(pe);status("Erro ao carregar produtos.");return}
+const menu=document.getElementById("menu");menu.innerHTML="";
+if(!cats||!cats.length){menu.innerHTML='<div class="empty">Nenhuma categoria disponível.</div>';status("Cardápio carregado.");return}
+for(const cat of cats){
+const ps=(products||[]).filter(p=>p.category_id===cat.id);if(!ps.length)continue;
+const sec=document.createElement("section");sec.className="category";
+sec.innerHTML="<h2>"+cat.name+"</h2>";
+ps.forEach(p=>{
+const item=document.createElement("div");item.className="product";
+const image=p.image_url?'<img src="'+p.image_url+'" alt="">':'<div style="width:95px;height:95px;border-radius:10px;background:#e5e7eb"></div>';
+item.innerHTML=image+'<div class="info"><h3>'+p.name+'</h3><p>'+((p.description)||"")+'</p><div class="price">'+money(p.price)+'</div></div><button class="add">Adicionar</button>';
+item.querySelector(".add").onclick=add;sec.appendChild(item);
+});
+menu.appendChild(sec);
+}
+status("Cardápio carregado.");
+}
+(async()=>{if(await loadStore())await loadMenu()})();
+document.getElementById("cart").onclick=()=>alert("Carrinho em preparação para a próxima etapa.");
+</script>
 </body>
 </html>

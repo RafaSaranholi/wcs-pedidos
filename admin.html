@@ -1,116 +1,47 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WCS Pedidos — Proprietário</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    *{box-sizing:border-box}
-    body{
-      margin:0;min-height:100vh;font-family:Arial,Helvetica,sans-serif;
-      background:linear-gradient(135deg,#111827,#1f2937);
-      display:flex;align-items:center;justify-content:center;padding:20px
-    }
-    .card{
-      width:100%;max-width:430px;background:#fff;border-radius:24px;
-      padding:36px 28px;box-shadow:0 20px 50px rgba(0,0,0,.25)
-    }
-    .logo{
-      width:72px;height:72px;margin:0 auto 18px;border-radius:18px;
-      background:#16a34a;color:#fff;display:flex;align-items:center;
-      justify-content:center;font-size:30px;font-weight:bold
-    }
-    h1{margin:0;text-align:center;color:#111827;font-size:28px}
-    .subtitle{text-align:center;color:#6b7280;margin:8px 0 28px}
-    label{display:block;color:#374151;font-weight:bold;font-size:14px;margin:16px 0 7px}
-    input{
-      width:100%;padding:14px;border:1px solid #d1d5db;border-radius:10px;
-      font-size:16px;outline:none
-    }
-    input:focus{border-color:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.12)}
-    button{
-      width:100%;margin-top:22px;padding:15px;border:0;border-radius:10px;
-      background:#111827;color:#fff;font-size:16px;font-weight:bold;cursor:pointer
-    }
-    button:hover{background:#1f2937}
-    button:disabled{opacity:.6;cursor:not-allowed}
-    .msg{margin-top:16px;padding:12px;border-radius:10px;font-size:14px;display:none}
-    .error{display:block;background:#fee2e2;color:#991b1b}
-    .success{display:block;background:#dcfce7;color:#166534}
-    .back{
-      display:block;text-align:center;margin-top:20px;color:#6b7280;
-      text-decoration:none;font-size:14px
-    }
-  </style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>WCS Pedidos — Proprietário</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(135deg,#111827,#1f2937);display:flex;align-items:center;justify-content:center;padding:20px}
+.card{width:100%;max-width:430px;background:#fff;border-radius:24px;padding:36px 28px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.logo{width:72px;height:72px;margin:0 auto 18px;border-radius:18px;background:#16a34a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:bold}
+h1{margin:0;text-align:center;color:#111827;font-size:28px}.subtitle{text-align:center;color:#6b7280;margin:8px 0 28px}
+label{display:block;color:#374151;font-weight:bold;font-size:14px;margin:16px 0 7px}
+input{width:100%;padding:14px;border:1px solid #d1d5db;border-radius:10px;font-size:16px;outline:none}
+input:focus{border-color:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.12)}
+button{width:100%;margin-top:22px;padding:15px;border:0;border-radius:10px;background:#111827;color:#fff;font-size:16px;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.6}.msg{margin-top:16px;padding:12px;border-radius:10px;font-size:14px;display:none}.error{display:block;background:#fee2e2;color:#991b1b}.success{display:block;background:#dcfce7;color:#166534}
+.back{display:block;text-align:center;margin-top:20px;color:#6b7280;text-decoration:none;font-size:14px}
+</style>
 </head>
 <body>
-  <div class="card">
-    <div class="logo">W</div>
-    <h1>Área do Proprietário</h1>
-    <div class="subtitle">Entre para administrar sua loja</div>
-
-    <form id="loginForm">
-      <label for="email">E-mail</label>
-      <input id="email" type="email" autocomplete="email" required>
-
-      <label for="password">Senha</label>
-      <input id="password" type="password" autocomplete="current-password" required>
-
-      <button id="loginButton" type="submit">ENTRAR</button>
-    </form>
-
-    <div id="message" class="msg"></div>
-
-    <a class="back" href="index.html">← Voltar</a>
-  </div>
-
+<div class="card">
+<div class="logo">W</div>
+<h1>Área do Proprietário</h1>
+<div class="subtitle">Entre para administrar sua loja</div>
+<form id="loginForm">
+<label for="email">E-mail</label><input id="email" type="email" autocomplete="email" required>
+<label for="password">Senha</label><input id="password" type="password" autocomplete="current-password" required>
+<button id="loginButton" type="submit">ENTRAR</button>
+</form>
+<div id="message" class="msg"></div>
+<a class="back" href="index.html">← Voltar</a>
+</div>
 <script>
-const SUPABASE_URL = "https://ikhwsuofjmsqtjmjytzg.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_OJ4FLmLOfPB-iezUDRI2-A_RiodfJ_V";
-
-const supabaseClient = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_PUBLISHABLE_KEY
-);
-
-const form = document.getElementById("loginForm");
-const button = document.getElementById("loginButton");
-const message = document.getElementById("message");
-
-function showMessage(text, type) {
-  message.textContent = text;
-  message.className = "msg " + type;
-}
-
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
-
-  button.disabled = true;
-  button.textContent = "ENTRANDO...";
-  message.className = "msg";
-  message.textContent = "";
-
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
-
-  const { error } = await supabaseClient.auth.signInWithPassword({
-    email,
-    password
-  });
-
-  if (error) {
-    showMessage("E-mail ou senha inválidos.", "error");
-    button.disabled = false;
-    button.textContent = "ENTRAR";
-    return;
-  }
-
-  showMessage("Login realizado. Preparando o painel...", "success");
-
-  setTimeout(() => {
-    window.location.href = "painel.html";
-  }, 700);
+const SUPABASE_URL="https://ikhwsuofjmsqtjmjytzg.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY="sb_publishable_OJ4FLmLOfPB-iezUDRI2-A_RiodfJ_V";
+const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+const form=document.getElementById("loginForm"),button=document.getElementById("loginButton"),message=document.getElementById("message");
+function msg(t,c){message.textContent=t;message.className="msg "+c}
+form.addEventListener("submit",async e=>{
+e.preventDefault();button.disabled=true;button.textContent="ENTRANDO...";message.className="msg";
+const email=document.getElementById("email").value.trim(),password=document.getElementById("password").value;
+const {error}=await supabaseClient.auth.signInWithPassword({email,password});
+if(error){msg("E-mail ou senha inválidos.","error");button.disabled=false;button.textContent="ENTRAR";return}
+msg("Login realizado.","success");setTimeout(()=>location.href="painel.html",400);
 });
 </script>
 </body>
