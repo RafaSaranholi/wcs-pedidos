@@ -270,6 +270,7 @@ async function createOrder(customerId,name,phone){
     const item=await sb.from("order_items").insert({
       order_id:r.data.id,
       product_id:p.id,
+      product_name:p.name,
       quantity:i.qty,
       unit_price:p.price,
       total:Number(p.price)*i.qty
