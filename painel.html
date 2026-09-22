@@ -1,39 +1,341 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>WCS Pedidos — Painel</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;color:#111827}
-header{background:#111827;color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:center}
-.brand{font-size:22px;font-weight:bold}.logout{border:0;background:#374151;color:#fff;padding:10px 16px;border-radius:9px;cursor:pointer;font-weight:bold}
-main{max-width:1100px;margin:30px auto;padding:0 20px}.welcome{background:#fff;border-radius:16px;padding:25px;box-shadow:0 5px 20px rgba(0,0,0,.06)}
-h1{margin:0 0 8px;font-size:28px}p{color:#6b7280}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin-top:22px}
-.box{background:#fff;border-radius:16px;padding:22px;box-shadow:0 5px 20px rgba(0,0,0,.06)}.box h2{margin:0 0 8px;font-size:18px}.box span{color:#6b7280;font-size:14px}
+*{box-sizing:border-box}
+body{margin:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#0f172a}
+header{height:64px;background:#111827;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 22px}
+header b{font-size:20px}
+header button{border:0;background:#374151;color:#fff;padding:10px 15px;border-radius:9px;cursor:pointer;font-weight:bold}
+.layout{display:flex;min-height:calc(100vh - 64px)}
+.sidebar{width:235px;background:#fff;border-right:1px solid #e5e7eb;padding:16px}
+.nav{width:100%;display:block;text-align:left;border:0;background:#fff;padding:14px;border-radius:10px;margin-bottom:5px;cursor:pointer;font-weight:bold;color:#475569}
+.nav:hover,.nav.active{background:#dcfce7;color:#166534}
+main{flex:1;padding:28px;max-width:1200px}
+.page{display:none}.page.active{display:block}
+h1{margin:0 0 7px;font-size:28px}.sub{color:#64748b;margin-top:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:22px}
+.card{background:#fff;border:0;border-radius:16px;padding:22px;text-align:left;box-shadow:0 4px 18px #0000000b;cursor:pointer;transition:.15s}
+.card:hover{transform:translateY(-2px);box-shadow:0 8px 25px #00000018}
+.card h2{font-size:18px;margin:0 0 8px}.card p{margin:0;color:#64748b}
+.panel{background:#fff;border-radius:16px;padding:22px;margin-top:20px;box-shadow:0 4px 18px #0000000b}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+label{display:block;font-weight:bold;font-size:13px;margin:12px 0 6px}
+input,textarea,select{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:9px;font:inherit}
+textarea{min-height:90px}
+.btn{border:0;border-radius:9px;padding:11px 15px;font-weight:bold;cursor:pointer;margin-top:12px}
+.primary{background:#16a34a;color:#fff}.secondary{background:#e2e8f0;color:#111827}.danger{background:#fee2e2;color:#991b1b}
+table{width:100%;border-collapse:collapse;margin-top:16px}
+th,td{padding:11px;border-bottom:1px solid #e5e7eb;text-align:left;font-size:14px}
+.msg{display:none;margin-top:12px;padding:11px;border-radius:9px;background:#dcfce7;color:#166534}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-top:20px}
+.stat{background:#fff;border-radius:15px;padding:20px}.stat small{color:#64748b}.stat strong{display:block;font-size:28px;margin-top:7px}
+@media(max-width:800px){.layout{display:block}.sidebar{width:100%;display:flex;overflow:auto;gap:5px}.nav{white-space:nowrap;width:auto}.row,.stats{grid-template-columns:1fr}main{padding:16px}}
 </style>
 </head>
 <body>
-<header><div class="brand">WCS Pedidos</div><button class="logout" id="logout">Sair</button></header>
+
+<header>
+  <b>WCS Pedidos</b>
+  <div><span id="userEmail" style="margin-right:12px"></span><button id="logout">Sair</button></div>
+</header>
+
+<div class="layout">
+<aside class="sidebar">
+  <button class="nav active" data-page="inicio">📊 Visão geral</button>
+  <button class="nav" data-page="loja">🏪 Minha Loja</button>
+  <button class="nav" data-page="categorias">📂 Categorias</button>
+  <button class="nav" data-page="produtos">🍔 Produtos</button>
+  <button class="nav" data-page="pedidos">🛒 Pedidos</button>
+</aside>
+
 <main>
-<section class="welcome"><h1>Painel do Proprietário</h1><p id="userInfo">Carregando...</p></section>
-<section class="grid">
-<div class="box"><h2>🏪 Minha Loja</h2><span>Configurações da loja</span></div>
-<div class="box"><h2>📂 Categorias</h2><span>Gerenciar categorias</span></div>
-<div class="box"><h2>🍔 Produtos</h2><span>Gerenciar produtos e preços</span></div>
-<div class="box"><h2>🛒 Pedidos</h2><span>Visualizar pedidos</span></div>
+<section id="inicio" class="page active">
+  <h1>Painel do Proprietário</h1>
+  <p class="sub" id="companyName">Carregando loja...</p>
+  <div class="stats">
+    <div class="stat"><small>Categorias</small><strong id="statCats">0</strong></div>
+    <div class="stat"><small>Produtos</small><strong id="statProducts">0</strong></div>
+    <div class="stat"><small>Pedidos</small><strong id="statOrders">0</strong></div>
+    <div class="stat"><small>Loja</small><strong id="statOpen">—</strong></div>
+  </div>
+  <div class="cards">
+    <button class="card jump" data-page="loja"><h2>🏪 Minha Loja</h2><p>Configurações da loja</p></button>
+    <button class="card jump" data-page="categorias"><h2>📂 Categorias</h2><p>Gerenciar categorias</p></button>
+    <button class="card jump" data-page="produtos"><h2>🍔 Produtos</h2><p>Gerenciar produtos e preços</p></button>
+    <button class="card jump" data-page="pedidos"><h2>🛒 Pedidos</h2><p>Visualizar pedidos</p></button>
+  </div>
 </section>
-</main>
+
+<section id="loja" class="page">
+<h1>Minha Loja</h1><p class="sub">Configure as informações básicas.</p>
+<div class="panel">
+<div class="row"><div><label>Nome</label><input id="shopName"></div><div><label>Slug</label><input id="shopSlug" disabled></div></div>
+<label>Descrição</label><textarea id="shopDesc"></textarea>
+<div class="row"><div><label>Horário de abertura</label><input id="openTime" type="time"></div><div><label>Horário de fechamento</label><input id="closeTime" type="time"></div></div>
+<div class="row"><div><label>Taxa de entrega</label><input id="deliveryFee" type="number" step=".01"></div><div><label>Pedido mínimo</label><input id="minimumOrder" type="number" step=".01"></div></div>
+<button class="btn primary" id="saveShop">Salvar configurações</button><div id="shopMsg" class="msg"></div>
+</div></section>
+
+<section id="categorias" class="page">
+<h1>Categorias</h1><p class="sub">Adicione e remova categorias.</p>
+<div class="panel">
+<div class="row"><div><label>Nome</label><input id="catName" placeholder="Ex.: Lanches"></div><div><label>Descrição</label><input id="catDesc"></div></div>
+<button class="btn primary" id="addCategory">Adicionar categoria</button><div id="catMsg" class="msg"></div><div id="catList"></div>
+</div></section>
+
+<section id="produtos" class="page">
+<h1>Produtos</h1><p class="sub">Cadastre os produtos do cardápio.</p>
+<div class="panel">
+<div class="row"><div><label>Nome</label><input id="prodName"></div><div><label>Categoria</label><select id="prodCategory"></select></div></div>
+<label>Descrição</label><textarea id="prodDesc"></textarea>
+<div class="row"><div><label>Preço</label><input id="prodPrice" type="number" step=".01"></div><div><label>URL da imagem</label><input id="prodImage"></div></div>
+<button class="btn primary" id="addProduct">Adicionar produto</button><div id="prodMsg" class="msg"></div><div id="prodList"></div>
+</div></section>
+
+<section id="pedidos" class="page">
+<h1>Pedidos</h1><p class="sub">Pedidos recebidos pela loja.</p>
+<div class="panel"><button class="btn secondary" id="refreshOrders">Atualizar pedidos</button><div id="orderList"></div></div>
+</section>
+</main></div>
+
 <script>
 const SUPABASE_URL="https://ikhwsuofjmsqtjmjytzg.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY="sb_publishable_OJ4FLmLOfPB-iezUDRI2-A_RiodfJ_V";
-const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
-(async()=>{
-const {data:{session}}=await supabaseClient.auth.getSession();
-if(!session){location.href="admin.html";return}
-document.getElementById("userInfo").textContent="Usuário conectado: "+(session.user.email||"usuário autenticado");
-})();
-document.getElementById("logout").onclick=async()=>{await supabaseClient.auth.signOut();location.href="index.html"};
+const SUPABASE_KEY="sb_publishable_OJ4FLmLOfPB-iezUDRI2-A_RiodfJ_V";
+const FALLBACK_COMPANY="e3182b21-7d45-4d73-81e1-f2beb399fa9a";
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+let companyId=FALLBACK_COMPANY;
+let categories=[];
+let products=[];
+let orders=[];
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+const money=v=>Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+
+function showPage(id){
+  document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll(".nav").forEach(x=>x.classList.remove("active"));
+  const page=$(id);
+  if(page) page.classList.add("active");
+  document.querySelectorAll('.nav[data-page="'+id+'"]').forEach(x=>x.classList.add("active"));
+  if(id==="pedidos") loadOrders();
+}
+
+document.querySelectorAll(".nav,.jump").forEach(btn=>{
+  btn.addEventListener("click",()=>showPage(btn.dataset.page));
+});
+
+$("logout").onclick=async()=>{
+  await sb.auth.signOut();
+  location.href="index.html";
+};
+
+function msg(id,text){
+  $(id).textContent=text;
+  $(id).style.display="block";
+  setTimeout(()=>$(id).style.display="none",3000);
+}
+
+async function init(){
+  const session=await sb.auth.getSession();
+  if(!session.data.session){
+    location.href="admin.html";
+    return;
+  }
+
+  $("userEmail").textContent=session.data.session.user.email||"";
+
+  const member=await sb.from("company_members")
+    .select("company_id,role")
+    .eq("user_id",session.data.session.user.id)
+    .limit(1)
+    .maybeSingle();
+
+  if(member.data && member.data.company_id){
+    companyId=member.data.company_id;
+  }
+
+  await loadCompany();
+  await loadSettings();
+  await loadCategories();
+  await loadProducts();
+  await loadOrders();
+  updateStats();
+}
+
+async function loadCompany(){
+  const r=await sb.from("companies").select("*").eq("id",companyId).maybeSingle();
+  if(r.data){
+    $("companyName").textContent=r.data.name||"Minha loja";
+    $("shopName").value=r.data.name||"";
+    $("shopSlug").value=r.data.slug||"";
+    $("shopDesc").value=r.data.description||"";
+  }
+}
+
+async function loadSettings(){
+  const r=await sb.from("store_settings").select("*").eq("company_id",companyId).maybeSingle();
+  const s=r.data||{};
+  $("openTime").value=s.opening_time||"08:00";
+  $("closeTime").value=s.closing_time||"22:00";
+  $("deliveryFee").value=s.delivery_fee??0;
+  $("minimumOrder").value=s.minimum_order??0;
+  $("statOpen").textContent=s.is_open===false?"Fechada":"Aberta";
+}
+
+$("saveShop").onclick=async()=>{
+  let r=await sb.from("companies").update({
+    name:$("shopName").value.trim(),
+    description:$("shopDesc").value.trim()
+  }).eq("id",companyId);
+
+  if(r.error){msg("shopMsg",r.error.message);return;}
+
+  r=await sb.from("store_settings").update({
+    opening_time:$("openTime").value,
+    closing_time:$("closeTime").value,
+    delivery_fee:Number($("deliveryFee").value||0),
+    minimum_order:Number($("minimumOrder").value||0)
+  }).eq("company_id",companyId);
+
+  if(r.error){msg("shopMsg",r.error.message);return;}
+  msg("shopMsg","Configurações salvas com sucesso.");
+  await loadCompany();
+  await loadSettings();
+};
+
+async function loadCategories(){
+  const r=await sb.from("categories")
+    .select("*")
+    .eq("company_id",companyId)
+    .order("display_order",{ascending:true});
+  categories=r.data||[];
+  renderCategories();
+  fillCategorySelect();
+}
+
+function renderCategories(){
+  $("catList").innerHTML=categories.length
+    ? "<table><tr><th>Nome</th><th>Descrição</th><th>Ação</th></tr>"+
+      categories.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.description)}</td><td><button class="btn danger" onclick="deleteCategory('${c.id}')">Excluir</button></td></tr>`).join("")+
+      "</table>"
+    : "<p class='sub'>Nenhuma categoria cadastrada.</p>";
+}
+
+function fillCategorySelect(){
+  $("prodCategory").innerHTML=categories.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("");
+}
+
+$("addCategory").onclick=async()=>{
+  const name=$("catName").value.trim();
+  if(!name){msg("catMsg","Informe o nome da categoria.");return;}
+  const r=await sb.from("categories").insert({
+    company_id:companyId,name,
+    description:$("catDesc").value.trim(),
+    display_order:categories.length+1,
+    is_active:true
+  });
+  if(r.error){msg("catMsg",r.error.message);return;}
+  $("catName").value="";$("catDesc").value="";
+  await loadCategories();updateStats();
+  msg("catMsg","Categoria criada.");
+};
+
+window.deleteCategory=async id=>{
+  if(!confirm("Excluir esta categoria?"))return;
+  const r=await sb.from("categories").delete().eq("id",id);
+  if(r.error){alert(r.error.message);return;}
+  await loadCategories();await loadProducts();updateStats();
+};
+
+async function loadProducts(){
+  const r=await sb.from("products")
+    .select("*")
+    .eq("company_id",companyId)
+    .order("display_order",{ascending:true});
+  products=r.data||[];
+  renderProducts();
+}
+
+function renderProducts(){
+  $("prodList").innerHTML=products.length
+    ? "<table><tr><th>Produto</th><th>Categoria</th><th>Preço</th><th>Ação</th></tr>"+
+      products.map(p=>{
+        const c=categories.find(x=>x.id===p.category_id);
+        return `<tr><td><b>${esc(p.name)}</b><br><small>${esc(p.description)}</small></td><td>${esc(c?.name||"—")}</td><td>${money(p.price)}</td><td><button class="btn danger" onclick="deleteProduct('${p.id}')">Excluir</button></td></tr>`;
+      }).join("")+"</table>"
+    : "<p class='sub'>Nenhum produto cadastrado.</p>";
+}
+
+$("addProduct").onclick=async()=>{
+  const name=$("prodName").value.trim();
+  const category_id=$("prodCategory").value;
+  const price=Number($("prodPrice").value);
+
+  if(!name||!category_id||!price){
+    msg("prodMsg","Preencha nome, categoria e preço.");
+    return;
+  }
+
+  const r=await sb.from("products").insert({
+    company_id:companyId,category_id,name,
+    description:$("prodDesc").value.trim(),
+    price,image_url:$("prodImage").value.trim()||null,
+    display_order:products.length+1,is_active:true
+  });
+
+  if(r.error){msg("prodMsg",r.error.message);return;}
+
+  $("prodName").value="";$("prodDesc").value="";$("prodPrice").value="";$("prodImage").value="";
+  await loadProducts();updateStats();
+  msg("prodMsg","Produto criado.");
+};
+
+window.deleteProduct=async id=>{
+  if(!confirm("Excluir este produto?"))return;
+  const r=await sb.from("products").delete().eq("id",id);
+  if(r.error){alert(r.error.message);return;}
+  await loadProducts();updateStats();
+};
+
+async function loadOrders(){
+  const r=await sb.from("orders")
+    .select("*")
+    .eq("company_id",companyId)
+    .order("created_at",{ascending:false})
+    .limit(100);
+
+  orders=r.data||[];
+
+  if(r.error){
+    $("orderList").innerHTML="<p style='color:#991b1b'>"+esc(r.error.message)+"</p>";
+    return;
+  }
+
+  $("orderList").innerHTML=orders.length
+    ? "<table><tr><th>Data</th><th>Cliente</th><th>Total</th><th>Status</th></tr>"+
+      orders.map(o=>`<tr><td>${o.created_at?new Date(o.created_at).toLocaleString("pt-BR"):"—"}</td><td>${esc(o.customer_name||o.name||o.customer_id||"—")}</td><td>${money(o.total)}</td><td>${esc(o.status||"—")}</td></tr>`).join("")+
+      "</table>"
+    : "<p class='sub'>Nenhum pedido recebido ainda.</p>";
+
+  updateStats();
+}
+
+$("refreshOrders").onclick=loadOrders;
+
+function updateStats(){
+  $("statCats").textContent=categories.length;
+  $("statProducts").textContent=products.length;
+  $("statOrders").textContent=orders.length;
+}
+
+init();
 </script>
 </body>
 </html>
