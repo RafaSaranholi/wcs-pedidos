@@ -1,341 +1,282 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WCS Pedidos — Painel</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WCS Pedidos - Painel</title>
+
+<script>
+/* Navegação definida antes da página carregar */
+function showPage(pageId) {
+    var pages = document.querySelectorAll(".page");
+    for (var i = 0; i < pages.length; i++) {
+        pages[i].style.display = "none";
+    }
+
+    var target = document.getElementById("page-" + pageId);
+    if (target) {
+        target.style.display = "block";
+    }
+
+    var buttons = document.querySelectorAll(".nav-btn");
+    for (var j = 0; j < buttons.length; j++) {
+        buttons[j].classList.remove("active");
+    }
+
+    var active = document.querySelector('[data-page="' + pageId + '"]');
+    if (active) active.classList.add("active");
+}
+
+function sair() {
+    try {
+        if (window.supabaseClient && window.supabaseClient.auth) {
+            window.supabaseClient.auth.signOut().finally(function() {
+                window.location.href = "admin.html";
+            });
+        } else {
+            window.location.href = "admin.html";
+        }
+    } catch(e) {
+        window.location.href = "admin.html";
+    }
+}
+</script>
+
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#0f172a}
-header{height:64px;background:#111827;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 22px}
-header b{font-size:20px}
-header button{border:0;background:#374151;color:#fff;padding:10px 15px;border-radius:9px;cursor:pointer;font-weight:bold}
-.layout{display:flex;min-height:calc(100vh - 64px)}
-.sidebar{width:235px;background:#fff;border-right:1px solid #e5e7eb;padding:16px}
-.nav{width:100%;display:block;text-align:left;border:0;background:#fff;padding:14px;border-radius:10px;margin-bottom:5px;cursor:pointer;font-weight:bold;color:#475569}
-.nav:hover,.nav.active{background:#dcfce7;color:#166534}
-main{flex:1;padding:28px;max-width:1200px}
-.page{display:none}.page.active{display:block}
-h1{margin:0 0 7px;font-size:28px}.sub{color:#64748b;margin-top:0}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:22px}
-.card{background:#fff;border:0;border-radius:16px;padding:22px;text-align:left;box-shadow:0 4px 18px #0000000b;cursor:pointer;transition:.15s}
-.card:hover{transform:translateY(-2px);box-shadow:0 8px 25px #00000018}
-.card h2{font-size:18px;margin:0 0 8px}.card p{margin:0;color:#64748b}
-.panel{background:#fff;border-radius:16px;padding:22px;margin-top:20px;box-shadow:0 4px 18px #0000000b}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-label{display:block;font-weight:bold;font-size:13px;margin:12px 0 6px}
-input,textarea,select{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:9px;font:inherit}
-textarea{min-height:90px}
-.btn{border:0;border-radius:9px;padding:11px 15px;font-weight:bold;cursor:pointer;margin-top:12px}
-.primary{background:#16a34a;color:#fff}.secondary{background:#e2e8f0;color:#111827}.danger{background:#fee2e2;color:#991b1b}
-table{width:100%;border-collapse:collapse;margin-top:16px}
-th,td{padding:11px;border-bottom:1px solid #e5e7eb;text-align:left;font-size:14px}
-.msg{display:none;margin-top:12px;padding:11px;border-radius:9px;background:#dcfce7;color:#166534}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-top:20px}
-.stat{background:#fff;border-radius:15px;padding:20px}.stat small{color:#64748b}.stat strong{display:block;font-size:28px;margin-top:7px}
-@media(max-width:800px){.layout{display:block}.sidebar{width:100%;display:flex;overflow:auto;gap:5px}.nav{white-space:nowrap;width:auto}.row,.stats{grid-template-columns:1fr}main{padding:16px}}
+body{
+    margin:0;
+    font-family:Arial,Helvetica,sans-serif;
+    background:#f1f5f9;
+    color:#0f172a;
+}
+.top{
+    height:70px;
+    background:#111827;
+    color:white;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 28px;
+}
+.logo{
+    font-size:23px;
+    font-weight:800;
+}
+.logo span{color:#22c55e}
+.sair{
+    border:0;
+    border-radius:8px;
+    background:#374151;
+    color:#fff;
+    padding:11px 18px;
+    font-weight:700;
+    cursor:pointer;
+}
+.layout{
+    display:flex;
+    min-height:calc(100vh - 70px);
+}
+.sidebar{
+    width:230px;
+    background:#172033;
+    padding:20px 14px;
+}
+.nav-btn{
+    width:100%;
+    border:0;
+    background:transparent;
+    color:#dbe4f0;
+    text-align:left;
+    padding:14px 15px;
+    border-radius:9px;
+    margin-bottom:7px;
+    cursor:pointer;
+    font-size:15px;
+}
+.nav-btn:hover,.nav-btn.active{
+    background:#263449;
+    color:#fff;
+}
+.content{
+    flex:1;
+    padding:30px;
+}
+.page{display:none}
+.page:first-child{display:block}
+h1{margin-top:0}
+.subtitle{color:#64748b;margin-top:-10px}
+.grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+    gap:18px;
+    margin-top:25px;
+}
+.card{
+    background:#fff;
+    border-radius:14px;
+    padding:24px;
+    box-shadow:0 3px 14px rgba(15,23,42,.08);
+    cursor:pointer;
+    border:2px solid transparent;
+    transition:.15s;
+}
+.card:hover{
+    border-color:#22c55e;
+    transform:translateY(-2px);
+}
+.icon{font-size:35px;margin-bottom:12px}
+.card h3{margin:0 0 7px}
+.card p{margin:0;color:#64748b}
+.box{
+    background:#fff;
+    border-radius:14px;
+    padding:25px;
+    box-shadow:0 3px 14px rgba(15,23,42,.08);
+}
+.back{
+    display:inline-block;
+    margin-bottom:20px;
+    color:#15803d;
+    font-weight:700;
+    cursor:pointer;
+}
+.info{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:15px;
+}
+.info div{
+    background:#f8fafc;
+    border-radius:10px;
+    padding:18px;
+}
+@media(max-width:700px){
+    .sidebar{width:70px;padding:12px 8px}
+    .nav-btn{font-size:0;text-align:center}
+    .nav-btn:first-letter{font-size:20px}
+    .content{padding:18px}
+}
 </style>
 </head>
+
 <body>
 
-<header>
-  <b>WCS Pedidos</b>
-  <div><span id="userEmail" style="margin-right:12px"></span><button id="logout">Sair</button></div>
+<header class="top">
+    <div class="logo">WCS <span>Pedidos</span></div>
+    <button class="sair" onclick="sair()">Sair</button>
 </header>
 
 <div class="layout">
-<aside class="sidebar">
-  <button class="nav active" data-page="inicio">📊 Visão geral</button>
-  <button class="nav" data-page="loja">🏪 Minha Loja</button>
-  <button class="nav" data-page="categorias">📂 Categorias</button>
-  <button class="nav" data-page="produtos">🍔 Produtos</button>
-  <button class="nav" data-page="pedidos">🛒 Pedidos</button>
-</aside>
 
-<main>
-<section id="inicio" class="page active">
-  <h1>Painel do Proprietário</h1>
-  <p class="sub" id="companyName">Carregando loja...</p>
-  <div class="stats">
-    <div class="stat"><small>Categorias</small><strong id="statCats">0</strong></div>
-    <div class="stat"><small>Produtos</small><strong id="statProducts">0</strong></div>
-    <div class="stat"><small>Pedidos</small><strong id="statOrders">0</strong></div>
-    <div class="stat"><small>Loja</small><strong id="statOpen">—</strong></div>
-  </div>
-  <div class="cards">
-    <button class="card jump" data-page="loja"><h2>🏪 Minha Loja</h2><p>Configurações da loja</p></button>
-    <button class="card jump" data-page="categorias"><h2>📂 Categorias</h2><p>Gerenciar categorias</p></button>
-    <button class="card jump" data-page="produtos"><h2>🍔 Produtos</h2><p>Gerenciar produtos e preços</p></button>
-    <button class="card jump" data-page="pedidos"><h2>🛒 Pedidos</h2><p>Visualizar pedidos</p></button>
-  </div>
-</section>
+    <aside class="sidebar">
+        <button class="nav-btn active" data-page="inicio" onclick="showPage('inicio')">🏠 Início</button>
+        <button class="nav-btn" data-page="loja" onclick="showPage('loja')">🏪 Minha Loja</button>
+        <button class="nav-btn" data-page="categorias" onclick="showPage('categorias')">📂 Categorias</button>
+        <button class="nav-btn" data-page="produtos" onclick="showPage('produtos')">🍔 Produtos</button>
+        <button class="nav-btn" data-page="pedidos" onclick="showPage('pedidos')">🛒 Pedidos</button>
+    </aside>
 
-<section id="loja" class="page">
-<h1>Minha Loja</h1><p class="sub">Configure as informações básicas.</p>
-<div class="panel">
-<div class="row"><div><label>Nome</label><input id="shopName"></div><div><label>Slug</label><input id="shopSlug" disabled></div></div>
-<label>Descrição</label><textarea id="shopDesc"></textarea>
-<div class="row"><div><label>Horário de abertura</label><input id="openTime" type="time"></div><div><label>Horário de fechamento</label><input id="closeTime" type="time"></div></div>
-<div class="row"><div><label>Taxa de entrega</label><input id="deliveryFee" type="number" step=".01"></div><div><label>Pedido mínimo</label><input id="minimumOrder" type="number" step=".01"></div></div>
-<button class="btn primary" id="saveShop">Salvar configurações</button><div id="shopMsg" class="msg"></div>
-</div></section>
+    <main class="content">
 
-<section id="categorias" class="page">
-<h1>Categorias</h1><p class="sub">Adicione e remova categorias.</p>
-<div class="panel">
-<div class="row"><div><label>Nome</label><input id="catName" placeholder="Ex.: Lanches"></div><div><label>Descrição</label><input id="catDesc"></div></div>
-<button class="btn primary" id="addCategory">Adicionar categoria</button><div id="catMsg" class="msg"></div><div id="catList"></div>
-</div></section>
+        <section id="page-inicio" class="page" style="display:block">
+            <h1>Painel do Proprietário</h1>
+            <p class="subtitle">Gerencie sua loja pelo WCS Pedidos.</p>
 
-<section id="produtos" class="page">
-<h1>Produtos</h1><p class="sub">Cadastre os produtos do cardápio.</p>
-<div class="panel">
-<div class="row"><div><label>Nome</label><input id="prodName"></div><div><label>Categoria</label><select id="prodCategory"></select></div></div>
-<label>Descrição</label><textarea id="prodDesc"></textarea>
-<div class="row"><div><label>Preço</label><input id="prodPrice" type="number" step=".01"></div><div><label>URL da imagem</label><input id="prodImage"></div></div>
-<button class="btn primary" id="addProduct">Adicionar produto</button><div id="prodMsg" class="msg"></div><div id="prodList"></div>
-</div></section>
+            <div class="grid">
 
-<section id="pedidos" class="page">
-<h1>Pedidos</h1><p class="sub">Pedidos recebidos pela loja.</p>
-<div class="panel"><button class="btn secondary" id="refreshOrders">Atualizar pedidos</button><div id="orderList"></div></div>
-</section>
-</main></div>
+                <div class="card" onclick="showPage('loja')">
+                    <div class="icon">🏪</div>
+                    <h3>Minha Loja</h3>
+                    <p>Dados, horários e configurações da loja.</p>
+                </div>
 
-<script>
-const SUPABASE_URL="https://ikhwsuofjmsqtjmjytzg.supabase.co";
-const SUPABASE_KEY="sb_publishable_OJ4FLmLOfPB-iezUDRI2-A_RiodfJ_V";
-const FALLBACK_COMPANY="e3182b21-7d45-4d73-81e1-f2beb399fa9a";
-const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+                <div class="card" onclick="showPage('categorias')">
+                    <div class="icon">📂</div>
+                    <h3>Categorias</h3>
+                    <p>Organize as categorias do cardápio.</p>
+                </div>
 
-let companyId=FALLBACK_COMPANY;
-let categories=[];
-let products=[];
-let orders=[];
+                <div class="card" onclick="showPage('produtos')">
+                    <div class="icon">🍔</div>
+                    <h3>Produtos</h3>
+                    <p>Cadastre preços, produtos e imagens.</p>
+                </div>
 
-const $=id=>document.getElementById(id);
-const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
-const money=v=>Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+                <div class="card" onclick="showPage('pedidos')">
+                    <div class="icon">🛒</div>
+                    <h3>Pedidos</h3>
+                    <p>Visualize e acompanhe os pedidos.</p>
+                </div>
 
-function showPage(id){
-  document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));
-  document.querySelectorAll(".nav").forEach(x=>x.classList.remove("active"));
-  const page=$(id);
-  if(page) page.classList.add("active");
-  document.querySelectorAll('.nav[data-page="'+id+'"]').forEach(x=>x.classList.add("active"));
-  if(id==="pedidos") loadOrders();
-}
+            </div>
+        </section>
 
-document.querySelectorAll(".nav,.jump").forEach(btn=>{
-  btn.addEventListener("click",()=>showPage(btn.dataset.page));
-});
+        <section id="page-loja" class="page">
+            <div class="box">
+                <div class="back" onclick="showPage('inicio')">← Voltar ao início</div>
+                <h1>🏪 Minha Loja</h1>
+                <p class="subtitle">Configurações da sua loja.</p>
 
-$("logout").onclick=async()=>{
-  await sb.auth.signOut();
-  location.href="index.html";
-};
+                <div class="info">
+                    <div><strong>Nome</strong><br>Loja Teste</div>
+                    <div><strong>Slug</strong><br>loja-teste</div>
+                    <div><strong>Status</strong><br>Aberta</div>
+                    <div><strong>Entrega</strong><br>Ativa</div>
+                    <div><strong>Retirada</strong><br>Ativa</div>
+                    <div><strong>Horário</strong><br>08:00 às 22:00</div>
+                </div>
+            </div>
+        </section>
 
-function msg(id,text){
-  $(id).textContent=text;
-  $(id).style.display="block";
-  setTimeout(()=>$(id).style.display="none",3000);
-}
+        <section id="page-categorias" class="page">
+            <div class="box">
+                <div class="back" onclick="showPage('inicio')">← Voltar ao início</div>
+                <h1>📂 Categorias</h1>
+                <p class="subtitle">Categorias cadastradas na loja.</p>
 
-async function init(){
-  const session=await sb.auth.getSession();
-  if(!session.data.session){
-    location.href="admin.html";
-    return;
-  }
+                <div class="info">
+                    <div>
+                        <strong>Lanches</strong><br>
+                        Hambúrgueres e lanches
+                    </div>
+                </div>
+            </div>
+        </section>
 
-  $("userEmail").textContent=session.data.session.user.email||"";
+        <section id="page-produtos" class="page">
+            <div class="box">
+                <div class="back" onclick="showPage('inicio')">← Voltar ao início</div>
+                <h1>🍔 Produtos</h1>
+                <p class="subtitle">Produtos cadastrados na loja.</p>
 
-  const member=await sb.from("company_members")
-    .select("company_id,role")
-    .eq("user_id",session.data.session.user.id)
-    .limit(1)
-    .maybeSingle();
+                <div class="info">
+                    <div>
+                        <strong>X-Burger</strong><br>
+                        R$ 25,90<br>
+                        Pão, hambúrguer artesanal, queijo e molho especial.
+                    </div>
+                </div>
+            </div>
+        </section>
 
-  if(member.data && member.data.company_id){
-    companyId=member.data.company_id;
-  }
+        <section id="page-pedidos" class="page">
+            <div class="box">
+                <div class="back" onclick="showPage('inicio')">← Voltar ao início</div>
+                <h1>🛒 Pedidos</h1>
+                <p class="subtitle">Área de acompanhamento dos pedidos.</p>
 
-  await loadCompany();
-  await loadSettings();
-  await loadCategories();
-  await loadProducts();
-  await loadOrders();
-  updateStats();
-}
+                <div class="info">
+                    <div>
+                        <strong>Pedidos</strong><br>
+                        Nenhum pedido carregado ainda.
+                    </div>
+                </div>
+            </div>
+        </section>
 
-async function loadCompany(){
-  const r=await sb.from("companies").select("*").eq("id",companyId).maybeSingle();
-  if(r.data){
-    $("companyName").textContent=r.data.name||"Minha loja";
-    $("shopName").value=r.data.name||"";
-    $("shopSlug").value=r.data.slug||"";
-    $("shopDesc").value=r.data.description||"";
-  }
-}
+    </main>
+</div>
 
-async function loadSettings(){
-  const r=await sb.from("store_settings").select("*").eq("company_id",companyId).maybeSingle();
-  const s=r.data||{};
-  $("openTime").value=s.opening_time||"08:00";
-  $("closeTime").value=s.closing_time||"22:00";
-  $("deliveryFee").value=s.delivery_fee??0;
-  $("minimumOrder").value=s.minimum_order??0;
-  $("statOpen").textContent=s.is_open===false?"Fechada":"Aberta";
-}
-
-$("saveShop").onclick=async()=>{
-  let r=await sb.from("companies").update({
-    name:$("shopName").value.trim(),
-    description:$("shopDesc").value.trim()
-  }).eq("id",companyId);
-
-  if(r.error){msg("shopMsg",r.error.message);return;}
-
-  r=await sb.from("store_settings").update({
-    opening_time:$("openTime").value,
-    closing_time:$("closeTime").value,
-    delivery_fee:Number($("deliveryFee").value||0),
-    minimum_order:Number($("minimumOrder").value||0)
-  }).eq("company_id",companyId);
-
-  if(r.error){msg("shopMsg",r.error.message);return;}
-  msg("shopMsg","Configurações salvas com sucesso.");
-  await loadCompany();
-  await loadSettings();
-};
-
-async function loadCategories(){
-  const r=await sb.from("categories")
-    .select("*")
-    .eq("company_id",companyId)
-    .order("display_order",{ascending:true});
-  categories=r.data||[];
-  renderCategories();
-  fillCategorySelect();
-}
-
-function renderCategories(){
-  $("catList").innerHTML=categories.length
-    ? "<table><tr><th>Nome</th><th>Descrição</th><th>Ação</th></tr>"+
-      categories.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.description)}</td><td><button class="btn danger" onclick="deleteCategory('${c.id}')">Excluir</button></td></tr>`).join("")+
-      "</table>"
-    : "<p class='sub'>Nenhuma categoria cadastrada.</p>";
-}
-
-function fillCategorySelect(){
-  $("prodCategory").innerHTML=categories.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("");
-}
-
-$("addCategory").onclick=async()=>{
-  const name=$("catName").value.trim();
-  if(!name){msg("catMsg","Informe o nome da categoria.");return;}
-  const r=await sb.from("categories").insert({
-    company_id:companyId,name,
-    description:$("catDesc").value.trim(),
-    display_order:categories.length+1,
-    is_active:true
-  });
-  if(r.error){msg("catMsg",r.error.message);return;}
-  $("catName").value="";$("catDesc").value="";
-  await loadCategories();updateStats();
-  msg("catMsg","Categoria criada.");
-};
-
-window.deleteCategory=async id=>{
-  if(!confirm("Excluir esta categoria?"))return;
-  const r=await sb.from("categories").delete().eq("id",id);
-  if(r.error){alert(r.error.message);return;}
-  await loadCategories();await loadProducts();updateStats();
-};
-
-async function loadProducts(){
-  const r=await sb.from("products")
-    .select("*")
-    .eq("company_id",companyId)
-    .order("display_order",{ascending:true});
-  products=r.data||[];
-  renderProducts();
-}
-
-function renderProducts(){
-  $("prodList").innerHTML=products.length
-    ? "<table><tr><th>Produto</th><th>Categoria</th><th>Preço</th><th>Ação</th></tr>"+
-      products.map(p=>{
-        const c=categories.find(x=>x.id===p.category_id);
-        return `<tr><td><b>${esc(p.name)}</b><br><small>${esc(p.description)}</small></td><td>${esc(c?.name||"—")}</td><td>${money(p.price)}</td><td><button class="btn danger" onclick="deleteProduct('${p.id}')">Excluir</button></td></tr>`;
-      }).join("")+"</table>"
-    : "<p class='sub'>Nenhum produto cadastrado.</p>";
-}
-
-$("addProduct").onclick=async()=>{
-  const name=$("prodName").value.trim();
-  const category_id=$("prodCategory").value;
-  const price=Number($("prodPrice").value);
-
-  if(!name||!category_id||!price){
-    msg("prodMsg","Preencha nome, categoria e preço.");
-    return;
-  }
-
-  const r=await sb.from("products").insert({
-    company_id:companyId,category_id,name,
-    description:$("prodDesc").value.trim(),
-    price,image_url:$("prodImage").value.trim()||null,
-    display_order:products.length+1,is_active:true
-  });
-
-  if(r.error){msg("prodMsg",r.error.message);return;}
-
-  $("prodName").value="";$("prodDesc").value="";$("prodPrice").value="";$("prodImage").value="";
-  await loadProducts();updateStats();
-  msg("prodMsg","Produto criado.");
-};
-
-window.deleteProduct=async id=>{
-  if(!confirm("Excluir este produto?"))return;
-  const r=await sb.from("products").delete().eq("id",id);
-  if(r.error){alert(r.error.message);return;}
-  await loadProducts();updateStats();
-};
-
-async function loadOrders(){
-  const r=await sb.from("orders")
-    .select("*")
-    .eq("company_id",companyId)
-    .order("created_at",{ascending:false})
-    .limit(100);
-
-  orders=r.data||[];
-
-  if(r.error){
-    $("orderList").innerHTML="<p style='color:#991b1b'>"+esc(r.error.message)+"</p>";
-    return;
-  }
-
-  $("orderList").innerHTML=orders.length
-    ? "<table><tr><th>Data</th><th>Cliente</th><th>Total</th><th>Status</th></tr>"+
-      orders.map(o=>`<tr><td>${o.created_at?new Date(o.created_at).toLocaleString("pt-BR"):"—"}</td><td>${esc(o.customer_name||o.name||o.customer_id||"—")}</td><td>${money(o.total)}</td><td>${esc(o.status||"—")}</td></tr>`).join("")+
-      "</table>"
-    : "<p class='sub'>Nenhum pedido recebido ainda.</p>";
-
-  updateStats();
-}
-
-$("refreshOrders").onclick=loadOrders;
-
-function updateStats(){
-  $("statCats").textContent=categories.length;
-  $("statProducts").textContent=products.length;
-  $("statOrders").textContent=orders.length;
-}
-
-init();
-</script>
 </body>
 </html>
