@@ -4,58 +4,38 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cardápio Online</title>
-
   <style>
     :root {
       --primary: #111827;
       --secondary: #ffffff;
       --button-color: #16a34a;
     }
-
     * { box-sizing: border-box; }
-
     body {
       margin: 0;
       font-family: Arial, Helvetica, sans-serif;
       background: #f3f4f6;
       color: #111827;
     }
-
     header {
       background: var(--primary);
       color: var(--secondary);
       padding: 24px 16px;
       text-align: center;
     }
-
-    header h1 {
-      margin: 0 0 8px;
-      font-size: 28px;
-    }
-
-    header p {
-      margin: 0;
-      opacity: .9;
-    }
-
+    header h1 { margin: 0 0 8px; font-size: 28px; }
+    header p { margin: 0; opacity: .9; }
     main {
       max-width: 900px;
       margin: 0 auto;
       padding: 20px 16px 110px;
     }
-
     .category { margin-top: 28px; }
-
-    .category h2 {
-      margin: 0 0 12px;
-      font-size: 22px;
-    }
-
+    .category h2 { margin: 0 0 12px; font-size: 22px; }
     .category-description {
       margin: -4px 0 14px;
       color: #6b7280;
     }
-
     .product {
       background: #fff;
       border-radius: 14px;
@@ -66,7 +46,6 @@
       align-items: center;
       box-shadow: 0 2px 8px rgba(0,0,0,.08);
     }
-
     .product img,
     .product-placeholder {
       width: 110px;
@@ -76,29 +55,18 @@
       background: #e5e7eb;
       flex-shrink: 0;
     }
-
-    .product-info {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .product h3 {
-      margin: 0 0 6px;
-      font-size: 18px;
-    }
-
+    .product-info { flex: 1; min-width: 0; }
+    .product h3 { margin: 0 0 6px; font-size: 18px; }
     .product p {
       margin: 0 0 10px;
       color: #6b7280;
       line-height: 1.4;
     }
-
     .price {
       font-size: 18px;
       font-weight: bold;
       margin-bottom: 10px;
     }
-
     button {
       border: 0;
       border-radius: 8px;
@@ -108,7 +76,6 @@
       background: var(--button-color);
       color: #fff;
     }
-
     .cart {
       position: fixed;
       left: 16px;
@@ -126,35 +93,27 @@
       box-shadow: 0 5px 20px rgba(0,0,0,.2);
       z-index: 10;
     }
-
-    .loading,
-    .error,
-    .empty {
+    .loading, .error, .empty {
       text-align: center;
       padding: 40px 20px;
     }
-
     .error { color: #b91c1c; }
-
     @media (max-width: 600px) {
       .product {
         align-items: flex-start;
         padding: 12px;
       }
-
       .product img,
       .product-placeholder {
         width: 90px;
         height: 90px;
       }
-
       .product h3 { font-size: 17px; }
     }
   </style>
 </head>
 
 <body>
-
   <header>
     <h1 id="store-name">Carregando...</h1>
     <p id="store-description"></p>
@@ -176,15 +135,10 @@
 
     const SUPABASE_URL = "https://ikhwsuofjmsqtjmjytzg.supabase.co";
     const SUPABASE_KEY = "sb_publishable_OJ4FLmLOfPB-iezUDRI2-A_RiodfJ_V";
-
     const STORE_SLUG = "loja-teste";
-
-    // ID da empresa de teste criada no Supabase.
-    // É usado somente como segurança para esta primeira versão.
     const TEST_COMPANY_ID = "e3182b21-7d45-4d73-81e1-f2beb399fa9a";
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
     let cart = [];
 
     function escapeHtml(text) {
@@ -218,8 +172,6 @@
         throw new Error('A loja "loja-teste" não foi encontrada.');
       }
 
-      // Usa o ID retornado pelo banco. Para a loja de teste,
-      // temos também um fallback conhecido.
       const companyId = data.id || TEST_COMPANY_ID;
 
       if (!companyId) {
@@ -227,18 +179,13 @@
       }
 
       document.documentElement.style.setProperty(
-        "--primary",
-        data.primary_color || "#111827"
+        "--primary", data.primary_color || "#111827"
       );
-
       document.documentElement.style.setProperty(
-        "--secondary",
-        data.secondary_color || "#ffffff"
+        "--secondary", data.secondary_color || "#ffffff"
       );
-
       document.documentElement.style.setProperty(
-        "--button-color",
-        data.button_color || "#16a34a"
+        "--button-color", data.button_color || "#16a34a"
       );
 
       document.getElementById("store-name").textContent =
@@ -247,10 +194,7 @@
       document.getElementById("store-description").textContent =
         data.description || "";
 
-      return {
-        ...data,
-        id: companyId
-      };
+      return { ...data, id: companyId };
     }
 
     async function loadMenu(companyId) {
@@ -258,26 +202,33 @@
         throw new Error("ID da empresa não foi definido.");
       }
 
+      /*
+       * O banco deste projeto não possui a coluna "active"
+       * em categories/products. Por isso não usamos
+       * .eq("active", true) nestas consultas.
+       */
       const { data: categories, error: categoryError } = await supabase
         .from("categories")
         .select("id,name,description,display_order")
         .eq("company_id", companyId)
-        .eq("active", true)
         .order("display_order", { ascending: true });
 
       if (categoryError) {
-        throw new Error("Erro ao carregar categorias: " + categoryError.message);
+        throw new Error(
+          "Erro ao carregar categorias: " + categoryError.message
+        );
       }
 
       const { data: products, error: productError } = await supabase
         .from("products")
         .select("id,category_id,name,description,price,image_url,display_order")
         .eq("company_id", companyId)
-        .eq("active", true)
         .order("display_order", { ascending: true });
 
       if (productError) {
-        throw new Error("Erro ao carregar produtos: " + productError.message);
+        throw new Error(
+          "Erro ao carregar produtos: " + productError.message
+        );
       }
 
       const menu = document.getElementById("menu");
@@ -345,18 +296,15 @@
 
       menu.querySelectorAll("button[data-product-id]").forEach(button => {
         button.addEventListener("click", () => {
-          addToCart(
-            button.dataset.productId,
-            button.dataset.productName,
-            Number(button.dataset.productPrice)
-          );
+          cart.push({
+            id: button.dataset.productId,
+            name: button.dataset.productName,
+            price: Number(button.dataset.productPrice)
+          });
+
+          document.getElementById("cart-count").textContent = cart.length;
         });
       });
-    }
-
-    function addToCart(id, name, price) {
-      cart.push({ id, name, price });
-      document.getElementById("cart-count").textContent = cart.length;
     }
 
     async function init() {
@@ -367,7 +315,6 @@
         console.error("Erro ao carregar cardápio:", error);
 
         document.getElementById("menu").className = "error";
-
         document.getElementById("menu").innerHTML = `
           <h2>Não foi possível carregar o cardápio.</h2>
           <p>${escapeHtml(error.message || "Erro desconhecido.")}</p>
@@ -377,6 +324,5 @@
 
     init();
   </script>
-
 </body>
 </html>
