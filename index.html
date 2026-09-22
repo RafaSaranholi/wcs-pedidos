@@ -192,8 +192,8 @@
       const { data, error } = await supabase
   .from("companies")
   .select("id,name,description,primary_color,secondary_color,button_color")
-  .eq("slug", STORE_SLUG)
-  .single();
+  
+
 
       if (error) throw error;
 
@@ -221,7 +221,7 @@
         .from("products")
         .select("id,category_id,name,description,price,image_url,display_order")
         .eq("company_id", companyId)
-        .eq("active", true)
+       
         .order("display_order", { ascending: true });
 
       if (productError) throw productError;
