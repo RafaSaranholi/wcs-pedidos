@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Cardápio — WCS Pedidos</title>
+<meta name="wcs-build" content="2026-09-22-r3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#f1f5f9;font-family:Arial,sans-serif;color:#0f172a}
@@ -236,11 +237,11 @@ $("delivery").onchange=()=>{
 };
 
 async function createCustomer(name,phone){
-  const r=await sb.from("customers").insert({
+  const customerInsertResult=await sb.from("customers").insert({
     company_id:companyId,name,phone
   }).select("id").single();
-  if(r.error)throw r.error;
-  return r.data.id;
+  if(customerInsertResult.error) throw customerInsertResult.error;
+  return customerInsertResult.data.id;
 }
 
 async function createOrder(customerId,name,phone,payment,delivery,address,notes){
@@ -300,18 +301,22 @@ async function createOrder(customerId,name,phone,payment,delivery,address,notes)
 }
 
 async function invokePayment(orderId){
-  const body={order_id:orderId};
+  const paymentBody={order_id:orderId};
+  const functionResult=await sb.functions.invoke('dynamic-api',{body:paymentBody});
 
-  // A dashboard pode mostrar o nome amigável da função diferente do slug do endpoint.
-  // Tentamos o nome da função primeiro e, se a chamada nem chegar ao Edge Function,
-  // tentamos o slug que aparece no endpoint publicado.
-  let result=await sb.functions.invoke('criar-pagamento',{body});
-
-  if(result.error && /failed to send a request|function.*not found|404/i.test(String(result.error.message||''))){
-    result=await sb.functions.invoke('dynamic-api',{body});
+  if(functionResult.error){
+    let detail=functionResult.error.message||'Falha ao chamar a função de pagamento.';
+    try{
+      if(functionResult.error.context && typeof functionResult.error.context.json==='function'){
+        const responseBody=await functionResult.error.context.json();
+        if(responseBody?.error) detail=responseBody.error;
+        else if(responseBody?.message) detail=responseBody.message;
+      }
+    }catch(_){}
+    throw new Error(detail);
   }
 
-  return result;
+  return functionResult.data;
 }
 
 
@@ -345,14 +350,13 @@ $("send").onclick=async()=>{
     );
 
     if(payment==="mercado_pago"){
-      const {data,error}=await invokePayment(order.orderId);
+      const paymentResult=await invokePayment(order.orderId);
 
-      if(error)throw error;
-      if(!data?.checkout_url)
-        throw new Error(data?.error||"O Mercado Pago não retornou a URL de pagamento.");
+      if(!paymentResult?.checkout_url)
+        throw new Error(paymentResult?.error||"O Mercado Pago não retornou a URL de pagamento.");
 
       localStorage.setItem("wcs_ultimo_pedido",order.orderId);
-      window.location.href=data.checkout_url;
+      window.location.href=paymentResult.checkout_url;
       return;
     }
 
