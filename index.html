@@ -51,8 +51,13 @@
     }
 
     .category h2 {
-      margin-bottom: 12px;
+      margin: 0 0 12px;
       font-size: 22px;
+    }
+
+    .category-description {
+      margin: -4px 0 14px;
+      color: #6b7280;
     }
 
     .product {
@@ -66,7 +71,8 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
 
-    .product img {
+    .product img,
+    .product-placeholder {
       width: 110px;
       height: 110px;
       object-fit: cover;
@@ -77,6 +83,7 @@
 
     .product-info {
       flex: 1;
+      min-width: 0;
     }
 
     .product h3 {
@@ -106,6 +113,10 @@
       color: #fff;
     }
 
+    button:hover {
+      opacity: 0.92;
+    }
+
     .cart {
       position: fixed;
       left: 16px;
@@ -121,10 +132,12 @@
       justify-content: space-between;
       align-items: center;
       box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+      z-index: 10;
     }
 
     .loading,
-    .error {
+    .error,
+    .empty {
       text-align: center;
       padding: 40px 20px;
     }
@@ -134,9 +147,22 @@
     }
 
     @media (max-width: 600px) {
-      .product img {
+      .product {
+        align-items: flex-start;
+      }
+
+      .product img,
+      .product-placeholder {
         width: 90px;
         height: 90px;
+      }
+
+      .product {
+        padding: 12px;
+      }
+
+      .product h3 {
+        font-size: 17px;
       }
     }
   </style>
@@ -155,7 +181,7 @@
 
   <div class="cart">
     <span>🛒 Carrinho: <strong id="cart-count">0</strong></span>
-    <button onclick="alert('Carrinho será desenvolvido no próximo passo.')">
+    <button type="button" onclick="alert('Carrinho será desenvolvido no próximo passo.')">
       Ver carrinho
     </button>
   </div>
@@ -164,7 +190,7 @@
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
     const SUPABASE_URL = "https://ikhwsuofjmsqtjmjytzg.supabase.co";
-   const SUPABASE_KEY = "sb_publishable_OJ4FLmLOfPB-iezUDRI2-A_RiodfJ_V";
+    const SUPABASE_KEY = "sb_publishable_OJ4FLmLOfPB-iezUDRI2-A_RiodfJ_V";
 
     const STORE_SLUG = "loja-teste";
 
@@ -189,20 +215,43 @@
     }
 
     async function loadStore() {
+      // IMPORTANTE:
+      // A tabela companies deste projeto não possui a coluna "active".
+      // Por isso, a consulta usa somente o slug.
       const { data, error } = await supabase
-  .from("companies")
-  .select("id,name,description,primary_color,secondary_color,button_color")
-  
+        .from("companies")
+        .select("id,name,description,primary_color,secondary_color,button_color")
+        .eq("slug", STORE_SLUG)
+        .single();
 
+      if (error) {
+        throw error;
+      }
 
-      if (error) throw error;
+      if (!data) {
+        throw new Error("Loja não encontrada.");
+      }
 
-      document.documentElement.style.setProperty("--primary", data.primary_color || "#111827");
-      document.documentElement.style.setProperty("--secondary", data.secondary_color || "#ffffff");
-      document.documentElement.style.setProperty("--button-color", data.button_color || "#16a34a");
+      document.documentElement.style.setProperty(
+        "--primary",
+        data.primary_color || "#111827"
+      );
 
-      document.getElementById("store-name").textContent = data.name;
-      document.getElementById("store-description").textContent = data.description || "";
+      document.documentElement.style.setProperty(
+        "--secondary",
+        data.secondary_color || "#ffffff"
+      );
+
+      document.documentElement.style.setProperty(
+        "--button-color",
+        data.button_color || "#16a34a"
+      );
+
+      document.getElementById("store-name").textContent =
+        data.name || "Loja";
+
+      document.getElementById("store-description").textContent =
+        data.description || "";
 
       return data;
     }
@@ -212,63 +261,110 @@
         .from("categories")
         .select("id,name,description,display_order")
         .eq("company_id", companyId)
-  
+        .eq("active", true)
         .order("display_order", { ascending: true });
 
-      if (categoryError) throw categoryError;
+      if (categoryError) {
+        throw categoryError;
+      }
 
       const { data: products, error: productError } = await supabase
         .from("products")
         .select("id,category_id,name,description,price,image_url,display_order")
         .eq("company_id", companyId)
-       
+        .eq("active", true)
         .order("display_order", { ascending: true });
 
-      if (productError) throw productError;
+      if (productError) {
+        throw productError;
+      }
 
       const menu = document.getElementById("menu");
       menu.className = "";
 
       if (!categories || categories.length === 0) {
-        menu.innerHTML = "<div class='loading'>Nenhuma categoria cadastrada.</div>";
+        menu.innerHTML = `
+          <div class="empty">
+            <h2>Nenhuma categoria cadastrada.</h2>
+          </div>
+        `;
         return;
       }
 
       menu.innerHTML = categories.map(category => {
-        const categoryProducts = products.filter(
+        const categoryProducts = (products || []).filter(
           product => product.category_id === category.id
         );
 
         return `
           <section class="category">
             <h2>${escapeHtml(category.name)}</h2>
-            ${category.description ? `<p>${escapeHtml(category.description)}</p>` : ""}
-            ${categoryProducts.map(product => `
-              <article class="product">
-                ${
-                  product.image_url
-                    ? `<img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.name)}">`
-                    : `<div style="width:110px;height:110px;border-radius:10px;background:#e5e7eb;"></div>`
-                }
 
-                <div class="product-info">
-                  <h3>${escapeHtml(product.name)}</h3>
-                  <p>${escapeHtml(product.description || "")}</p>
-                  <div class="price">${formatPrice(product.price)}</div>
+            ${
+              category.description
+                ? `<p class="category-description">${escapeHtml(category.description)}</p>`
+                : ""
+            }
 
-                  <button onclick="addToCart('${product.id}', '${escapeHtml(product.name)}', ${Number(product.price)})">
-                    Adicionar
-                  </button>
-                </div>
-              </article>
-            `).join("")}
+            ${
+              categoryProducts.length
+                ? categoryProducts.map(product => `
+                    <article class="product">
+                      ${
+                        product.image_url
+                          ? `
+                            <img
+                              src="${escapeHtml(product.image_url)}"
+                              alt="${escapeHtml(product.name)}"
+                            >
+                          `
+                          : `
+                            <div class="product-placeholder"></div>
+                          `
+                      }
+
+                      <div class="product-info">
+                        <h3>${escapeHtml(product.name)}</h3>
+
+                        <p>
+                          ${escapeHtml(product.description || "")}
+                        </p>
+
+                        <div class="price">
+                          ${formatPrice(product.price)}
+                        </div>
+
+                        <button
+                          type="button"
+                          onclick="addToCart(
+                            '${escapeHtml(product.id)}',
+                            '${escapeHtml(product.name)}',
+                            ${Number(product.price) || 0}
+                          )"
+                        >
+                          Adicionar
+                        </button>
+                      </div>
+                    </article>
+                  `).join("")
+                : `
+                  <div class="empty">
+                    Nenhum produto disponível nesta categoria.
+                  </div>
+                `
+            }
           </section>
         `;
       }).join("");
     }
 
     window.addToCart = function(id, name, price) {
-      cart.push({ id, name, price });
+      cart.push({
+        id,
+        name,
+        price
+      });
+
       document.getElementById("cart-count").textContent = cart.length;
     };
 
@@ -277,13 +373,13 @@
         const store = await loadStore();
         await loadMenu(store.id);
       } catch (error) {
-        console.error(error);
+        console.error("Erro ao carregar cardápio:", error);
+
+        document.getElementById("menu").className = "error";
 
         document.getElementById("menu").innerHTML = `
-          <div class="error">
-            <h2>Não foi possível carregar o cardápio.</h2>
-            <p>${escapeHtml(error.message || "Erro desconhecido.")}</p>
-          </div>
+          <h2>Não foi possível carregar o cardápio.</h2>
+          <p>${escapeHtml(error.message || "Erro desconhecido.")}</p>
         `;
       }
     }
