@@ -12,9 +12,7 @@
       --button-color: #16a34a;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -37,18 +35,16 @@
 
     header p {
       margin: 0;
-      opacity: 0.9;
+      opacity: .9;
     }
 
     main {
       max-width: 900px;
       margin: 0 auto;
-      padding: 20px 16px 100px;
+      padding: 20px 16px 110px;
     }
 
-    .category {
-      margin-top: 28px;
-    }
+    .category { margin-top: 28px; }
 
     .category h2 {
       margin: 0 0 12px;
@@ -68,7 +64,7 @@
       display: flex;
       gap: 14px;
       align-items: center;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
     }
 
     .product img,
@@ -113,10 +109,6 @@
       color: #fff;
     }
 
-    button:hover {
-      opacity: 0.92;
-    }
-
     .cart {
       position: fixed;
       left: 16px;
@@ -131,7 +123,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+      box-shadow: 0 5px 20px rgba(0,0,0,.2);
       z-index: 10;
     }
 
@@ -142,13 +134,12 @@
       padding: 40px 20px;
     }
 
-    .error {
-      color: #b91c1c;
-    }
+    .error { color: #b91c1c; }
 
     @media (max-width: 600px) {
       .product {
         align-items: flex-start;
+        padding: 12px;
       }
 
       .product img,
@@ -157,13 +148,7 @@
         height: 90px;
       }
 
-      .product {
-        padding: 12px;
-      }
-
-      .product h3 {
-        font-size: 17px;
-      }
+      .product h3 { font-size: 17px; }
     }
   </style>
 </head>
@@ -194,6 +179,10 @@
 
     const STORE_SLUG = "loja-teste";
 
+    // ID da empresa de teste criada no Supabase.
+    // É usado somente como segurança para esta primeira versão.
+    const TEST_COMPANY_ID = "e3182b21-7d45-4d73-81e1-f2beb399fa9a";
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let cart = [];
@@ -215,21 +204,26 @@
     }
 
     async function loadStore() {
-      // IMPORTANTE:
-      // A tabela companies deste projeto não possui a coluna "active".
-      // Por isso, a consulta usa somente o slug.
       const { data, error } = await supabase
         .from("companies")
-        .select("id,name,description,primary_color,secondary_color,button_color")
+        .select("*")
         .eq("slug", STORE_SLUG)
-        .single();
+        .maybeSingle();
 
       if (error) {
-        throw error;
+        throw new Error("Erro ao localizar a loja: " + error.message);
       }
 
       if (!data) {
-        throw new Error("Loja não encontrada.");
+        throw new Error('A loja "loja-teste" não foi encontrada.');
+      }
+
+      // Usa o ID retornado pelo banco. Para a loja de teste,
+      // temos também um fallback conhecido.
+      const companyId = data.id || TEST_COMPANY_ID;
+
+      if (!companyId) {
+        throw new Error("A loja foi encontrada, mas não possui ID.");
       }
 
       document.documentElement.style.setProperty(
@@ -253,10 +247,17 @@
       document.getElementById("store-description").textContent =
         data.description || "";
 
-      return data;
+      return {
+        ...data,
+        id: companyId
+      };
     }
 
     async function loadMenu(companyId) {
+      if (!companyId) {
+        throw new Error("ID da empresa não foi definido.");
+      }
+
       const { data: categories, error: categoryError } = await supabase
         .from("categories")
         .select("id,name,description,display_order")
@@ -265,7 +266,7 @@
         .order("display_order", { ascending: true });
 
       if (categoryError) {
-        throw categoryError;
+        throw new Error("Erro ao carregar categorias: " + categoryError.message);
       }
 
       const { data: products, error: productError } = await supabase
@@ -276,7 +277,7 @@
         .order("display_order", { ascending: true });
 
       if (productError) {
-        throw productError;
+        throw new Error("Erro ao carregar produtos: " + productError.message);
       }
 
       const menu = document.getElementById("menu");
@@ -312,23 +313,14 @@
                     <article class="product">
                       ${
                         product.image_url
-                          ? `
-                            <img
-                              src="${escapeHtml(product.image_url)}"
-                              alt="${escapeHtml(product.name)}"
-                            >
-                          `
-                          : `
-                            <div class="product-placeholder"></div>
-                          `
+                          ? `<img src="${escapeHtml(product.image_url)}"
+                                  alt="${escapeHtml(product.name)}">`
+                          : `<div class="product-placeholder"></div>`
                       }
 
                       <div class="product-info">
                         <h3>${escapeHtml(product.name)}</h3>
-
-                        <p>
-                          ${escapeHtml(product.description || "")}
-                        </p>
+                        <p>${escapeHtml(product.description || "")}</p>
 
                         <div class="price">
                           ${formatPrice(product.price)}
@@ -336,37 +328,36 @@
 
                         <button
                           type="button"
-                          onclick="addToCart(
-                            '${escapeHtml(product.id)}',
-                            '${escapeHtml(product.name)}',
-                            ${Number(product.price) || 0}
-                          )"
+                          data-product-id="${escapeHtml(product.id)}"
+                          data-product-name="${escapeHtml(product.name)}"
+                          data-product-price="${Number(product.price) || 0}"
                         >
                           Adicionar
                         </button>
                       </div>
                     </article>
                   `).join("")
-                : `
-                  <div class="empty">
-                    Nenhum produto disponível nesta categoria.
-                  </div>
-                `
+                : `<div class="empty">Nenhum produto disponível nesta categoria.</div>`
             }
           </section>
         `;
       }).join("");
+
+      menu.querySelectorAll("button[data-product-id]").forEach(button => {
+        button.addEventListener("click", () => {
+          addToCart(
+            button.dataset.productId,
+            button.dataset.productName,
+            Number(button.dataset.productPrice)
+          );
+        });
+      });
     }
 
-    window.addToCart = function(id, name, price) {
-      cart.push({
-        id,
-        name,
-        price
-      });
-
+    function addToCart(id, name, price) {
+      cart.push({ id, name, price });
       document.getElementById("cart-count").textContent = cart.length;
-    };
+    }
 
     async function init() {
       try {
