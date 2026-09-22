@@ -253,6 +253,8 @@ async function createOrder(customerId,name,phone){
   const r=await sb.from("orders").insert({
     company_id:companyId,
     customer_id:customerId,
+    customer_name:name,
+    customer_phone:phone,
     status:"pending",
     total,
     delivery_type:$("delivery").value,
