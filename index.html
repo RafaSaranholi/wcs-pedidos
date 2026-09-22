@@ -190,11 +190,10 @@
 
     async function loadStore() {
       const { data, error } = await supabase
-        .from("companies")
-        .select("id,name,description,primary_color,secondary_color,button_color")
-        .eq("slug", STORE_SLUG)
-        .eq("active", true)
-        .single();
+  .from("companies")
+  .select("id,name,description,primary_color,secondary_color,button_color")
+  .eq("slug", STORE_SLUG)
+  .single();
 
       if (error) throw error;
 
