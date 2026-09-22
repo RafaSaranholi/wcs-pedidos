@@ -79,7 +79,7 @@ textarea{min-height:70px}.row{display:grid;grid-template-columns:1fr 1fr;gap:10p
         <select id="payment">
           <option value="mercado_pago">Mercado Pago</option>
           <option value="cash">Dinheiro</option>
-          <option value="card_delivery">Cartão na entrega/retirada</option>
+          <option value="credit_card">Cartão na entrega/retirada</option>
         </select>
       </div>
     </div>
@@ -245,39 +245,20 @@ async function createCustomer(name,phone){
 
 async function createOrder(customerId,name,phone){
   let total=0;
-  for(const i of cart){
+  const itemsToInsert=cart.map(i=>{
     const p=products.find(x=>x.id===i.id);
-    total+=Number(p.price)*i.qty;
-  }
-
-  const r=await sb.from("orders").insert({
-    company_id:companyId,
-    customer_id:customerId,
-    customer_name:name,
-    customer_phone:phone,
-    status:"pending",
-    total,
-    delivery_type:$("delivery").value,
-    delivery_address:$("address").value.trim(),
-    notes:$("notes").value.trim(),
-    payment_method:$("payment").value
-  }).select("id").single();
-
-  if(r.error)throw r.error;
-
-  for(const i of cart){
-    const p=products.find(x=>x.id===i.id);
-    const item=await sb.from("order_items").insert({
+    if(!p) throw new Error("Produto não encontrado no cardápio.");
+    return {
       order_id:r.data.id,
       product_id:p.id,
-      product_name:p.name,
-      quantity:i.qty,
-      unit_price:p.price,
-      total:Number(p.price)*i.qty
-    });
+      product_name:String(p.name || "Produto"),
+      quantity:Number(i.qty),
+      unit_price:Number(p.price)
+    };
+  });
 
-    if(item.error)throw item.error;
-  }
+  const itemResult=await sb.from("order_items").insert(itemsToInsert);
+  if(itemResult.error)throw itemResult.error;
 
   return {orderId:r.data.id,total};
 }
@@ -290,7 +271,9 @@ $("send").onclick=async()=>{
     const phone=$("cPhone").value.trim();
     const delivery=$("delivery").value;
     const payment=$("payment").value;
-
+    const supportedPayments=["mercado_pago","cash","credit_card"];
+    if(!supportedPayments.includes(payment))
+      return showMsg("Forma de pagamento inválida.",true);
     if(!name||!phone)return showMsg("Informe nome e telefone.",true);
     if(delivery==="delivery"&&!$("address").value.trim())
       return showMsg("Informe o endereço para entrega.",true);
@@ -327,6 +310,12 @@ $("send").onclick=async()=>{
     $("send").textContent=$("payment").value==="mercado_pago"?"FINALIZAR E PAGAR COM MERCADO PAGO":"FINALIZAR PEDIDO";
   }
 };
+
+const retorno=new URLSearchParams(location.search).get("pagamento");
+if(retorno){
+  const textos={sucesso:"Pagamento concluído. Seu pedido foi enviado para a loja.",falha:"O pagamento não foi concluído.",pendente:"Pagamento pendente. Aguarde a confirmação do Mercado Pago."};
+  setTimeout(()=>showMsg(textos[retorno]||"Retorno do pagamento recebido.",retorno==="falha"),0);
+}
 
 init();
 render();
