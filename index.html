@@ -212,7 +212,7 @@
         .from("categories")
         .select("id,name,description,display_order")
         .eq("company_id", companyId)
-        .eq("active", true)
+  
         .order("display_order", { ascending: true });
 
       if (categoryError) throw categoryError;
