@@ -236,12 +236,23 @@ $("delivery").onchange=()=>{
   if($("address").disabled)$("address").value="";
 };
 
+function newUuid(){
+  if(window.crypto && typeof window.crypto.randomUUID === "function") return window.crypto.randomUUID();
+  throw new Error("Seu navegador não suporta geração de identificador seguro.");
+}
+
 async function createCustomer(name,phone){
+  // Geramos o ID no navegador para não precisar fazer SELECT após o INSERT.
+  // Isso evita bloqueios de RLS para usuários anônimos.
+  const customerId=newUuid();
   const customerInsertResult=await sb.from("customers").insert({
-    company_id:companyId,name,phone
-  }).select("id").single();
+    id:customerId,
+    company_id:companyId,
+    name,
+    phone
+  });
   if(customerInsertResult.error) throw customerInsertResult.error;
-  return customerInsertResult.data.id;
+  return customerId;
 }
 
 async function createOrder(customerId,name,phone,payment,delivery,address,notes){
@@ -264,7 +275,12 @@ async function createOrder(customerId,name,phone,payment,delivery,address,notes)
 
   if(!items.length) throw new Error('Carrinho vazio.');
 
+  // Assim como o cliente, geramos o UUID do pedido no navegador para não
+  // depender de SELECT após INSERT, que é bloqueado pelo RLS para anon.
+  const orderId=newUuid();
+
   const orderPayload={
+    id:orderId,
     company_id:companyId,
     customer_id:customerId,
     customer_name:name,
@@ -277,14 +293,9 @@ async function createOrder(customerId,name,phone,payment,delivery,address,notes)
     payment_method:payment
   };
 
-  const orderResult=await sb.from('orders')
-    .insert(orderPayload)
-    .select('id')
-    .single();
+  const orderResult=await sb.from('orders').insert(orderPayload);
 
   if(orderResult.error) throw orderResult.error;
-
-  const orderId=orderResult.data.id;
 
   const itemPayload=items.map(item=>({
     order_id:orderId,
