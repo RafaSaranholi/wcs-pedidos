@@ -241,21 +241,7 @@ function newUuid(){
   throw new Error("Seu navegador não suporta geração de identificador seguro.");
 }
 
-async function createCustomer(name,phone){
-  // Geramos o ID no navegador para não precisar fazer SELECT após o INSERT.
-  // Isso evita bloqueios de RLS para usuários anônimos.
-  const customerId=newUuid();
-  const customerInsertResult=await sb.from("customers").insert({
-    id:customerId,
-    company_id:companyId,
-    name,
-    phone
-  });
-  if(customerInsertResult.error) throw customerInsertResult.error;
-  return customerId;
-}
-
-async function createOrder(customerId,name,phone,payment,delivery,address,notes){
+async function createOrder(name,phone,payment,delivery,address,notes){
   let total=0;
   const items=cart.map(i=>{
     const p=products.find(x=>x.id===i.id);
@@ -282,7 +268,6 @@ async function createOrder(customerId,name,phone,payment,delivery,address,notes)
   const orderPayload={
     id:orderId,
     company_id:companyId,
-    customer_id:customerId,
     customer_name:name,
     customer_phone:phone,
     status:'pending',
@@ -349,9 +334,7 @@ $("send").onclick=async()=>{
     $("send").disabled=true;
     $("send").textContent="PROCESSANDO...";
 
-    const customerId=await createCustomer(name,phone);
     const order=await createOrder(
-      customerId,
       name,
       phone,
       payment,
