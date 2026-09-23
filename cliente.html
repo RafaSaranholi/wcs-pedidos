@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Cardápio — WCS Pedidos</title>
-<meta name="wcs-build" content="2026-09-22-r3">
+<meta name="wcs-build" content="2026-09-22-r4-rpc">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#f1f5f9;font-family:Arial,sans-serif;color:#0f172a}
@@ -242,58 +242,39 @@ function newUuid(){
 }
 
 async function createOrder(name,phone,payment,delivery,address,notes){
-  let total=0;
   const items=cart.map(i=>{
     const p=products.find(x=>x.id===i.id);
     if(!p) throw new Error(`Produto não encontrado no cardápio: ${i.id}`);
-
-    const quantity=Math.max(1,Number(i.qty)||1);
-    const unitPrice=Number(p.price)||0;
-    total += unitPrice*quantity;
-
-    return {
-      product_id:p.id,
-      product_name:String(p.name || 'Produto'),
-      quantity,
-      unit_price:unitPrice
-    };
+    return { product_id:p.id, quantity:Math.max(1,Number(i.qty)||1) };
   });
 
   if(!items.length) throw new Error('Carrinho vazio.');
 
-  // Assim como o cliente, geramos o UUID do pedido no navegador para não
-  // depender de SELECT após INSERT, que é bloqueado pelo RLS para anon.
-  const orderId=newUuid();
+  // A gravação é feita por uma função SECURITY DEFINER no Supabase.
+  // Assim o visitante anônimo não precisa de INSERT direto em orders/order_items,
+  // eliminando os conflitos de RLS que estavam interrompendo o checkout.
+  const {data,error}=await sb.rpc('criar_pedido_publico',{
+    p_company_id:companyId,
+    p_customer_name:name,
+    p_customer_phone:phone,
+    p_payment_method:payment,
+    p_delivery_type:delivery,
+    p_delivery_address:delivery==='pickup' ? '' : String(address||'').trim(),
+    p_notes:String(notes||'').trim(),
+    p_items:items
+  });
 
-  const orderPayload={
-    id:orderId,
-    company_id:companyId,
-    customer_name:name,
-    customer_phone:phone,
-    status:'pending',
-    total,
-    delivery_type:delivery,
-    delivery_address:delivery==='pickup' ? '' : String(address||'').trim(),
-    notes:String(notes||'').trim(),
-    payment_method:payment
-  };
+  if(error) throw new Error(error.message || 'Não foi possível criar o pedido.');
+  if(!data) throw new Error('O Supabase não retornou o ID do pedido.');
 
-  const orderResult=await sb.from('orders').insert(orderPayload);
+  // A função retorna somente o UUID do pedido; o total continua sendo calculado
+  // no banco a partir dos preços atuais dos produtos.
+  const total=items.reduce((sum,item)=>{
+    const p=products.find(x=>x.id===item.product_id);
+    return sum + (Number(p?.price)||0)*item.quantity;
+  },0);
 
-  if(orderResult.error) throw orderResult.error;
-
-  const itemPayload=items.map(item=>({
-    order_id:orderId,
-    product_id:item.product_id,
-    product_name:item.product_name,
-    quantity:item.quantity,
-    unit_price:item.unit_price
-  }));
-
-  const itemResult=await sb.from('order_items').insert(itemPayload);
-  if(itemResult.error) throw itemResult.error;
-
-  return {orderId,total};
+  return {orderId:data,total};
 }
 
 async function invokePayment(orderId){
